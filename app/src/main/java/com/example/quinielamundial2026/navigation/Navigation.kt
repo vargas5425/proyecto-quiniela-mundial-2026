@@ -17,6 +17,7 @@ import com.example.quinielamundial2026.ui.screens.MatchDetailScreen
 import com.example.quinielamundial2026.ui.screens.MatchesScreen
 import com.example.quinielamundial2026.ui.screens.ProfileScreen
 import com.example.quinielamundial2026.ui.screens.RegisterScreen
+import com.example.quinielamundial2026.ui.screens.StadiumDetailScreen
 import com.example.quinielamundial2026.ui.screens.StadiumMapScreen
 
 @Composable
@@ -134,6 +135,17 @@ fun Navigation() {
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+        // ============ PANTALLA DE DETALLE DE ESTADIO ============
+        composable(
+            route = Screen.StadiumDetail.route,
+            arguments = listOf(navArgument("stadiumId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val stadiumId = backStackEntry.arguments?.getInt("stadiumId") ?: 0
+            StadiumDetailScreen(
+                navController = navController,
+                stadiumId = stadiumId
             )
         }
     }

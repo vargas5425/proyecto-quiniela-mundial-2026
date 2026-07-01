@@ -13,5 +13,8 @@ sealed class Screen(val route: String) {
         fun passMatchId(matchId: Int): String = "match_detail/$matchId"
     }
     object Stadiums : Screen("stadiums")
+    object StadiumDetail : Screen("stadium_detail/{stadiumId}") {
+        fun passStadiumId(stadiumId: Int): String = "stadium_detail/$stadiumId"
+    }
     object Profile : Screen("profile")
 }

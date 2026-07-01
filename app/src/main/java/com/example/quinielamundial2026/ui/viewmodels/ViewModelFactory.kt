@@ -56,6 +56,10 @@ class ViewModelFactory(
                     container.predictionRepository
                 ) as T
 
+            // Detail Stadium
+            modelClass.isAssignableFrom(StadiumDetailViewModel::class.java) ->
+                StadiumDetailViewModel(container.stadiumRepository) as T
+
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
     }

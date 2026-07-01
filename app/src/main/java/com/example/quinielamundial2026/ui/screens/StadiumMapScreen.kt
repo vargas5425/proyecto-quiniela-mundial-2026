@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.quinielamundial2026.QuinielaApplication
+import com.example.quinielamundial2026.navigation.Screen
 import com.example.quinielamundial2026.ui.components.LoadingSpinner
 import com.example.quinielamundial2026.ui.viewmodels.StadiumMapViewModel
 import com.example.quinielamundial2026.ui.viewmodels.ViewModelFactory
@@ -44,15 +46,33 @@ fun StadiumMapScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
-    // Estado del mapa con Google Maps
     val cameraPositionState = rememberCameraPositionState()
     var userLocation by remember { mutableStateOf<Location?>(null) }
     var isLocationPermissionGranted by remember { mutableStateOf(false) }
     var showStadiumList by remember { mutableStateOf(false) }
+    var selectedStadiumId by remember { mutableStateOf<Int?>(null) }
+    var isZoomedToStadium by remember { mutableStateOf(false) }
 
     val locationPermissionState = rememberPermissionState(
         Manifest.permission.ACCESS_FINE_LOCATION
     )
+
+    fun goToGeneralView() {
+        isZoomedToStadium = false
+        selectedStadiumId = null
+        if (uiState.stadiums.isNotEmpty()) {
+            val avgLat = uiState.stadiums.map { it.latitude }.average()
+            val avgLng = uiState.stadiums.map { it.longitude }.average()
+            coroutineScope.launch {
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(avgLat, avgLng),
+                        6f
+                    )
+                )
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         isLocationPermissionGranted = ActivityCompat.checkSelfPermission(
@@ -71,18 +91,50 @@ fun StadiumMapScreen(
         }
     }
 
-    LaunchedEffect(userLocation, uiState.stadiums) {
-        if (userLocation != null) {
+    // ============ ZOOM PARA VER TODOS LOS ESTADIOS ============
+    LaunchedEffect(uiState.stadiums) {
+        if (uiState.stadiums.isNotEmpty() && !isZoomedToStadium) {
+            val avgLat = uiState.stadiums.map { it.latitude }.average()
+            val avgLng = uiState.stadiums.map { it.longitude }.average()
+
+            val minLat = uiState.stadiums.minOf { it.latitude }
+            val maxLat = uiState.stadiums.maxOf { it.latitude }
+            val minLng = uiState.stadiums.minOf { it.longitude }
+            val maxLng = uiState.stadiums.maxOf { it.longitude }
+
+            val latDiff = maxLat - minLat
+            val lngDiff = maxLng - minLng
+            val maxDiff = maxOf(latDiff, lngDiff)
+
+            val zoomLevel = when {
+                maxDiff < 2.0 -> 12f
+                maxDiff < 5.0 -> 10f
+                maxDiff < 10.0 -> 8f
+                else -> 6f
+            }
+
             cameraPositionState.position = CameraPosition.fromLatLngZoom(
-                LatLng(userLocation!!.latitude, userLocation!!.longitude),
-                12f
+                LatLng(avgLat, avgLng),
+                zoomLevel
             )
-        } else if (uiState.stadiums.isNotEmpty()) {
-            val first = uiState.stadiums.first()
-            cameraPositionState.position = CameraPosition.fromLatLngZoom(
-                LatLng(first.latitude, first.longitude),
-                10f
-            )
+        }
+    }
+
+    // ============ CENTRAR EN ESTADIO SELECCIONADO DESDE LA LISTA ============
+    LaunchedEffect(selectedStadiumId, uiState.stadiums) {
+        if (selectedStadiumId != null) {
+            val stadium = uiState.stadiums.find { it.id == selectedStadiumId }
+            stadium?.let {
+                isZoomedToStadium = true
+                coroutineScope.launch {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(it.latitude, it.longitude),
+                            14f
+                        )
+                    )
+                }
+            }
         }
     }
 
@@ -95,14 +147,48 @@ fun StadiumMapScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mapa de Sedes") },
+                title = {
+                    Text(
+                        if (isZoomedToStadium && selectedStadiumId != null) {
+                            val stadium = uiState.stadiums.find { it.id == selectedStadiumId }
+                            stadium?.name ?: "Mapa de Sedes"
+                        } else {
+                            "Mapa de Sedes"
+                        }
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    // ============ BOTÓN DE RETROCESO - SIEMPRE NAVEGA ATRÁS ============
+                    IconButton(
+                        onClick = {
+                            navController.navigateUp()
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showStadiumList = !showStadiumList }) {
+                    // ============ BOTÓN PARA VOLVER A VISTA GENERAL ============
+                    if (isZoomedToStadium) {
+                        IconButton(
+                            onClick = {
+                                goToGeneralView()
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Public,
+                                contentDescription = "Ver todos los estadios"
+                            )
+                        }
+                    }
+
+                    // ============ BOTÓN PARA MOSTRAR LISTA ============
+                    IconButton(onClick = {
+                        showStadiumList = !showStadiumList
+                    }) {
                         Icon(Icons.Default.LocationOn, contentDescription = "Lista de sedes")
                     }
                 }
@@ -195,22 +281,16 @@ fun StadiumMapScreen(
                                 title = stadium.name,
                                 snippet = "${stadium.city}, ${stadium.country}",
                                 onClick = {
-                                    viewModel.selectStadium(stadium)
-                                    coroutineScope.launch {
-                                        cameraPositionState.animate(
-                                            CameraUpdateFactory.newLatLngZoom(
-                                                LatLng(stadium.latitude, stadium.longitude),
-                                                14f
-                                            )
-                                        )
-                                    }
+                                    navController.navigate(
+                                        Screen.StadiumDetail.passStadiumId(stadium.id)
+                                    )
                                     true
                                 }
                             )
                         }
                     }
 
-                    // ============ BOTÓN PARA MOSTRAR LISTA ============
+                    // ============ LISTA DE ESTADIOS ============
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -230,26 +310,38 @@ fun StadiumMapScreen(
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     items(uiState.stadiums) { stadium ->
+                                        val isSelected = selectedStadiumId == stadium.id
+
                                         ListItem(
-                                            headlineContent = { Text(stadium.name) },
+                                            headlineContent = {
+                                                Text(
+                                                    stadium.name,
+                                                    color = if (isSelected) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurface
+                                                    }
+                                                )
+                                            },
                                             supportingContent = {
                                                 Text("${stadium.city}, ${stadium.country}")
                                             },
                                             leadingContent = {
-                                                Icon(Icons.Default.LocationOn, contentDescription = null)
+                                                Icon(
+                                                    Icons.Default.LocationOn,
+                                                    contentDescription = null,
+                                                    tint = if (isSelected) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                                    }
+                                                )
                                             },
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
-                                                    viewModel.selectStadium(stadium)
-                                                    coroutineScope.launch {
-                                                        cameraPositionState.animate(
-                                                            CameraUpdateFactory.newLatLngZoom(
-                                                                LatLng(stadium.latitude, stadium.longitude),
-                                                                14f
-                                                            )
-                                                        )
-                                                    }
+                                                    // Centrar el mapa en el estadio
+                                                    selectedStadiumId = stadium.id
                                                     showStadiumList = false
                                                 }
                                         )
@@ -259,53 +351,44 @@ fun StadiumMapScreen(
                         }
                     }
 
-                    // ============ DETALLE DEL ESTADIO SELECCIONADO ============
-                    uiState.selectedStadium?.let { stadium ->
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(16.dp)
-                        ) {
-                            Card(
+                    // ============ INDICADOR DE ESTADIO SELECCIONADO ============
+                    if (isZoomedToStadium && selectedStadiumId != null) {
+                        val selectedStadium = uiState.stadiums.find { it.id == selectedStadiumId }
+                        if (selectedStadium != null) {
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 16.dp)
                             ) {
-                                Column(
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp)
+                                        .padding(horizontal = 16.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
                                 ) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column {
-                                            Text(
-                                                text = stadium.name,
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-                                            Text(
-                                                text = "${stadium.city}, ${stadium.country}",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        IconButton(onClick = { viewModel.clearSelectedStadium() }) {
-                                            Icon(
-                                                Icons.Default.ArrowBack,
-                                                contentDescription = "Cerrar"
-                                            )
-                                        }
+                                        Icon(
+                                            Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "${selectedStadium.name} - ${selectedStadium.city}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Capacidad: ${stadium.capacity} espectadores",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
                             }
                         }

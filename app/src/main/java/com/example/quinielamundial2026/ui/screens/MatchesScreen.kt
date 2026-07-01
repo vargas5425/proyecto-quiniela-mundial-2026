@@ -29,16 +29,11 @@ fun MatchesScreen(
 
     var showFilterMenu by remember { mutableStateOf(false) }
 
-    val hasActiveFilters = uiState.selectedPhase != null ||
-            uiState.selectedStatus != null ||
-            uiState.selectedDate != null
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Partidos") },
                 actions = {
-                    if (hasActiveFilters){
                     IconButton(onClick = { showFilterMenu = true }) {
                         Icon(Icons.Default.FilterList, contentDescription = "Filtros")
                     }
@@ -48,7 +43,6 @@ fun MatchesScreen(
                     IconButton(onClick = { viewModel.loadMatches() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
                     }
-                   }
                 }
             )
         }
