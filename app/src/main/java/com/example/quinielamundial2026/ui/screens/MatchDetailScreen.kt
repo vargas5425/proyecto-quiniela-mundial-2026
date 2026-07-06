@@ -266,7 +266,7 @@ fun MatchDetailScreen(
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
 
-                                // ============ MOSTRAR PRONÓSTICO GUARDADO ============
+                                // ============ MOSTRAR PRONÓSTICO GUARDADO  ============
                                 if (myPrediction != null) {
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
@@ -279,6 +279,7 @@ fun MatchDetailScreen(
                                                 .fillMaxWidth()
                                                 .padding(12.dp)
                                         ) {
+
                                             Text(
                                                 text = "Pronóstico guardado: ${myPrediction.homeScore} - ${myPrediction.awayScore}",
                                                 style = MaterialTheme.typography.bodyMedium,

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quinielamundial2026.QuinielaApplication
 import com.example.quinielamundial2026.data.repository.MatchRepository
+import com.example.quinielamundial2026.data.repository.PredictionRepository
 import com.example.quinielamundial2026.ui.states.MatchesUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,8 @@ import java.util.Date
 import java.util.Locale
 
 class MatchesViewModel(
-    private val matchRepository: MatchRepository
+    private val matchRepository: MatchRepository,
+    private val predictionRepository: PredictionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MatchesUiState())
@@ -109,5 +111,15 @@ class MatchesViewModel(
 
     fun clearFilters() {
         loadMatches()
+    }
+
+    // ============ MÉTODOS PARA SINCRONIZACIÓN ============
+
+    suspend fun getPendingCount(): Int {
+        return predictionRepository.getPendingCount()
+    }
+
+    suspend fun syncPredictions(): Result<Int> {
+        return predictionRepository.syncPendingPredictions()
     }
 }

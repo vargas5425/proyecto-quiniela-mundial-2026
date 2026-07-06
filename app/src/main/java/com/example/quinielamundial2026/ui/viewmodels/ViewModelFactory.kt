@@ -36,7 +36,10 @@ class ViewModelFactory(
 
             // Matches
             modelClass.isAssignableFrom(MatchesViewModel::class.java) ->
-                MatchesViewModel(container.matchRepository) as T
+                MatchesViewModel(
+                    container.matchRepository,
+                    container.predictionRepository
+                ) as T
 
             // MatchDetail
             modelClass.isAssignableFrom(MatchDetailViewModel::class.java) ->

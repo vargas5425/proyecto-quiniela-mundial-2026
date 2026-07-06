@@ -95,62 +95,65 @@ fun MatchesScreen(
             }
 
             else -> {
-                if (uiState.selectedPhase != null || uiState.selectedStatus != null || uiState.selectedDate != null) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                if (uiState.selectedPhase != null) {
-                                    AssistChip(
-                                        onClick = { },
-                                        label = { Text(uiState.selectedPhase!!.replace("_", " ")) },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Default.Circle,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
-                                    )
-                                }
-                                if (uiState.selectedStatus != null) {
-                                    AssistChip(
-                                        onClick = { },
-                                        label = { Text(uiState.selectedStatus!!) }
-                                    )
-                                }
-                            }
-                            TextButton(onClick = { viewModel.clearFilters() }) {
-                                Text("Limpiar filtros")
-                            }
-                        }
-                    }
-                }
-
-                LazyColumn(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.matches) { match ->
-                        MatchCard(
-                            match = match,
-                            onClick = { onNavigateToMatchDetail(match.id) }
-                        )
+                    // Filtros activos
+                    if (uiState.selectedPhase != null || uiState.selectedStatus != null || uiState.selectedDate != null) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (uiState.selectedPhase != null) {
+                                        AssistChip(
+                                            onClick = { },
+                                            label = { Text(uiState.selectedPhase!!.replace("_", " ")) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.Circle,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        )
+                                    }
+                                    if (uiState.selectedStatus != null) {
+                                        AssistChip(
+                                            onClick = { },
+                                            label = { Text(uiState.selectedStatus!!) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(uiState.matches) { match ->
+                            MatchCard(
+                                match = match,
+                                onClick = { onNavigateToMatchDetail(match.id) }
+                            )
+                        }
                     }
                 }
             }

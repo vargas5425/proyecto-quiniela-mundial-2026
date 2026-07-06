@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,6 +17,7 @@ import com.example.quinielamundial2026.QuinielaApplication
 import com.example.quinielamundial2026.ui.components.LoadingSpinner
 import com.example.quinielamundial2026.ui.viewmodels.HomeViewModel
 import com.example.quinielamundial2026.ui.viewmodels.ViewModelFactory
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,13 +30,33 @@ fun HomeScreen(
 ) {
     val factory = ViewModelFactory(QuinielaApplication.instance.container)
     val viewModel: HomeViewModel = viewModel(factory = factory)
+    val coroutineScope = rememberCoroutineScope()
 
     val uiState by viewModel.uiState.collectAsState()
     val container = QuinielaApplication.instance.container
     val userName = container.authRepository.getUserName() ?: "Usuario"
 
+    // Estado para mostrar si hay pronósticos pendientes
+    var pendingCount by remember { mutableStateOf(0) }
+    var showSyncButton by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         viewModel.loadHomeData()
+
+        val count = viewModel.getPendingCount()
+        pendingCount = count
+        showSyncButton = count > 0
+
+        if (count > 0) {
+            val result = viewModel.syncPredictions()
+            result.onSuccess { synced ->
+                if (synced > 0) {
+                    pendingCount = viewModel.getPendingCount()
+                    showSyncButton = pendingCount > 0
+                    viewModel.loadHomeData()
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -45,7 +67,13 @@ fun HomeScreen(
                     IconButton(onClick = onNavigateToProfile) {
                         Icon(Icons.Default.Person, contentDescription = "Perfil")
                     }
-                    IconButton(onClick = { viewModel.loadHomeData() }) {
+                    IconButton(onClick = {
+                        viewModel.loadHomeData()
+                        coroutineScope.launch {
+                            pendingCount = viewModel.getPendingCount()
+                            showSyncButton = pendingCount > 0
+                        }
+                    }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
                     }
                 }
@@ -84,6 +112,49 @@ fun HomeScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // BOTÓN DE SINCRONIZACIÓN
+                    if (showSyncButton && pendingCount > 0) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            val result = viewModel.syncPredictions()
+                                            result.onSuccess { synced ->
+                                                if (synced > 0) {
+                                                    pendingCount = viewModel.getPendingCount()
+                                                    showSyncButton = pendingCount > 0
+                                                    viewModel.loadHomeData()
+                                                }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.height(28.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF9800),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Sincronizar $pendingCount pronóstico${if (pendingCount > 1) "s" else ""}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFFF9800)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Text(

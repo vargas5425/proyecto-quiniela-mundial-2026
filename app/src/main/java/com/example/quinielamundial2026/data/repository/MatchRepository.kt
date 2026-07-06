@@ -7,6 +7,7 @@ import com.example.quinielamundial2026.data.database.relations.MatchWithStadium
 import com.example.quinielamundial2026.data.models.response.MatchDetailResponse
 import com.example.quinielamundial2026.data.models.response.MatchResponse
 import com.example.quinielamundial2026.data.models.response.MatchUpdatesResponse
+import com.example.quinielamundial2026.data.models.response.StadiumResponse
 import com.example.quinielamundial2026.utils.NetworkUtils
 import com.example.quinielamundial2026.QuinielaApplication
 
@@ -153,7 +154,7 @@ class MatchRepository(
                     homeScore = match.homeScore,
                     awayScore = match.awayScore,
                     stadium = stadium?.let {
-                        com.example.quinielamundial2026.data.models.response.StadiumResponse(
+                        StadiumResponse(
                             id = it.id,
                             name = it.name,
                             city = it.city,

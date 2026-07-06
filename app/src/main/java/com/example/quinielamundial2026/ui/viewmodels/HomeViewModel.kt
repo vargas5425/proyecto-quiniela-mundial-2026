@@ -106,4 +106,14 @@ class HomeViewModel(
         }
         return result
     }
+
+    // ============ MÉTODOS PARA SINCRONIZACIÓN ============
+
+    suspend fun getPendingCount(): Int {
+        return predictionRepository.getPendingCount()
+    }
+
+    suspend fun syncPredictions(): Result<Int> {
+        return predictionRepository.syncPendingPredictions()
+    }
 }

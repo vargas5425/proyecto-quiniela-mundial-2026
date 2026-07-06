@@ -11,5 +11,6 @@ data class PredictionEntity(
     val homeScore: Int,
     val awayScore: Int,
     val pointsEarned: Int? = null,
-    val status: String
+    val status: String,
+    val synced: Boolean = false
 )

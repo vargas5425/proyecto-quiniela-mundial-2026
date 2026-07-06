@@ -24,4 +24,13 @@ interface PredictionDao {
     @Transaction
     @Query("SELECT * FROM predictions")
     suspend fun getAllPredictionsWithMatch(): List<PredictionWithMatch>
+
+    // ============ PRONÓSTICOS PENDIENTES ============
+
+    @Query("SELECT * FROM predictions WHERE synced = 0")
+    suspend fun getPendingPredictions(): List<PredictionEntity>
+
+    @Query("DELETE FROM predictions WHERE id = :predictionId")
+    suspend fun deletePrediction(predictionId: Int)
+
 }
