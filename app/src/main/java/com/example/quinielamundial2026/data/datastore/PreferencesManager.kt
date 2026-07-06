@@ -8,6 +8,7 @@ class PreferencesManager(context: Context) {
     companion object {
         private const val PREF_NAME = "quiniela_prefs"
         private const val KEY_TOKEN = "auth_token"
+        private const val KEY_TOKEN_EXPIRY = "auth_token_expiry"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_LAST_SYNC = "last_sync"
@@ -17,17 +18,36 @@ class PreferencesManager(context: Context) {
 
     // ============ TOKEN ============
 
-    fun saveToken(token: String) {
-        prefs.edit().putString(KEY_TOKEN, token).apply()
-    }
-
     fun getToken(): String? {
+        if (isTokenExpired()) {
+            clearAll()
+            return null
+        }
         return prefs.getString(KEY_TOKEN, null)
     }
 
-    /*fun clearToken() {
-        prefs.edit().remove(KEY_TOKEN).apply()
-    }*/
+    // ============ EXPIRACIÓN DEL TOKEN ============
+
+    fun saveTokenWithExpiry(token: String, expiresInSeconds: Long = 86400) {
+        val expiryTime = System.currentTimeMillis() + (expiresInSeconds * 1000)
+        prefs.edit()
+            .putString(KEY_TOKEN, token)
+            .putLong(KEY_TOKEN_EXPIRY, expiryTime)
+            .apply()
+    }
+
+    fun getTokenExpiry(): Long? {
+        return prefs.getLong(KEY_TOKEN_EXPIRY, 0).takeIf { it > 0 }
+    }
+
+    fun isTokenExpired(): Boolean {
+        val expiry = getTokenExpiry()
+        return if (expiry != null) {
+            System.currentTimeMillis() > expiry
+        } else {
+            false
+        }
+    }
 
     // ============ DATOS DEL USUARIO ============
 
@@ -50,7 +70,10 @@ class PreferencesManager(context: Context) {
 
     // ============ ESTADO DE AUTENTICACIÓN ============
 
-    fun isLoggedIn(): Boolean = getToken() != null
+    fun isLoggedIn(): Boolean {
+        val token = getToken()
+        return token != null && !isTokenExpired()
+    }
 
     fun clearAll() {
         prefs.edit().clear().apply()

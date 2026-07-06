@@ -15,8 +15,5 @@ data class MatchEntity(
     val status: String,
     val homeScore: Int? = null,
     val awayScore: Int? = null,
-    val stadiumId: Int? = null,
-    val stadiumName: String? = null,
-    val stadiumCity: String? = null,
-    val stadiumCountry: String? = null
+    val stadiumId: Int? = null
 )

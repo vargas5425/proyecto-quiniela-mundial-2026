@@ -2,7 +2,6 @@ package com.example.quinielamundial2026.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.quinielamundial2026.QuinielaApplication
 import com.example.quinielamundial2026.data.models.response.PredictionDetailResponse
 import com.example.quinielamundial2026.data.repository.MatchRepository
 import com.example.quinielamundial2026.data.repository.PredictionRepository
@@ -34,8 +33,7 @@ class MatchDetailViewModel(
                 )
 
                 try {
-                    val database = QuinielaApplication.instance.database
-                    val existingPrediction = database.predictionDao().getPredictionByMatch(matchId)
+                    val existingPrediction = predictionRepository.getPredictionByMatch(matchId)
 
                     if (existingPrediction != null) {
                         val predictionDetail = PredictionDetailResponse(

@@ -1,14 +1,18 @@
 package com.example.quinielamundial2026.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.quinielamundial2026.QuinielaApplication
-import com.example.quinielamundial2026.data.api.ApiClient
-import com.example.quinielamundial2026.data.repository.AuthRepository
 import com.example.quinielamundial2026.ui.screens.GroupDetailScreen
 import com.example.quinielamundial2026.ui.screens.GroupsScreen
 import com.example.quinielamundial2026.ui.screens.HomeScreen
@@ -19,12 +23,29 @@ import com.example.quinielamundial2026.ui.screens.ProfileScreen
 import com.example.quinielamundial2026.ui.screens.RegisterScreen
 import com.example.quinielamundial2026.ui.screens.StadiumDetailScreen
 import com.example.quinielamundial2026.ui.screens.StadiumMapScreen
+import kotlinx.coroutines.delay
 
 @Composable
 fun Navigation() {
     val navController = rememberNavController()
     val container = QuinielaApplication.instance.container
-    val isLoggedIn = container.authRepository.isLoggedIn()
+
+    var isLoggedIn by remember { mutableStateOf(container.authRepository.isLoggedIn()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000)
+            val currentLoginState = container.authRepository.isLoggedIn()
+            if (currentLoginState != isLoggedIn) {
+                isLoggedIn = currentLoginState
+                if (!currentLoginState) {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -34,6 +55,7 @@ fun Navigation() {
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
+                    isLoggedIn = true
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
@@ -71,6 +93,7 @@ fun Navigation() {
                     navController.navigate(Screen.Profile.route)
                 },
                 onLogout = {
+                    isLoggedIn = false
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
@@ -131,12 +154,14 @@ fun Navigation() {
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onLogout = {
+                    isLoggedIn = false
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
+
         // ============ PANTALLA DE DETALLE DE ESTADIO ============
         composable(
             route = Screen.StadiumDetail.route,

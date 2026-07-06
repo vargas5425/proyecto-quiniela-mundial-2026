@@ -3,6 +3,7 @@ package com.example.quinielamundial2026.data.repository
 import com.example.quinielamundial2026.data.api.ApiService
 import com.example.quinielamundial2026.data.database.AppDatabase
 import com.example.quinielamundial2026.data.database.entities.PredictionEntity
+import com.example.quinielamundial2026.data.database.relations.PredictionWithMatch
 import com.example.quinielamundial2026.data.models.request.PredictionRequest
 import com.example.quinielamundial2026.data.models.response.PredictionDetailResponse
 import com.example.quinielamundial2026.data.models.response.PredictionResponse
@@ -85,24 +86,52 @@ class PredictionRepository(
         }
     }
 
+    // ============ OBTENER PREDICCIONES DESDE LOCAL  ============
     private suspend fun getPredictionsFromLocal(): Result<List<PredictionDetailResponse>> {
-        val localPredictions = database.predictionDao().getAllPredictions()
-        return if (localPredictions.isNotEmpty()) {
+        val predictionsWithMatch = database.predictionDao().getAllPredictionsWithMatch()
+        return if (predictionsWithMatch.isNotEmpty()) {
             Result.success(
-                localPredictions.map {
-                    PredictionDetailResponse(
-                        id = it.id,
-                        matchId = it.matchId,
-                        homeScore = it.homeScore,
-                        awayScore = it.awayScore,
-                        pointsEarned = it.pointsEarned,
-                        status = it.status,
-                        match = null
-                    )
+                predictionsWithMatch.map { predictionWithMatch ->
+                    predictionWithMatch.toResponse()
                 }
             )
         } else {
             Result.failure(Exception("No hay pronósticos guardados localmente"))
         }
     }
+
+    // ============ OBTENER PREDICCIÓN POR PARTIDO  ============
+    suspend fun getPredictionByMatch(matchId: Int): PredictionEntity? {
+        return try {
+            database.predictionDao().getPredictionByMatch(matchId)
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+// ============ FUNCIÓN DE EXTENSIÓN PARA MAPEO ============
+private fun PredictionWithMatch.toResponse(): PredictionDetailResponse {
+    return PredictionDetailResponse(
+        id = prediction.id,
+        matchId = prediction.matchId,
+        homeScore = prediction.homeScore,
+        awayScore = prediction.awayScore,
+        pointsEarned = prediction.pointsEarned,
+        status = prediction.status,
+        match = match?.let { matchEntity ->
+            com.example.quinielamundial2026.data.models.response.MatchResponse(
+                id = matchEntity.id,
+                homeTeam = matchEntity.homeTeam,
+                awayTeam = matchEntity.awayTeam,
+                matchDate = matchEntity.matchDate,
+                phase = matchEntity.phase,
+                groupName = matchEntity.groupName,
+                status = matchEntity.status,
+                homeScore = matchEntity.homeScore,
+                awayScore = matchEntity.awayScore,
+                stadium = null
+            )
+        }
+    )
 }

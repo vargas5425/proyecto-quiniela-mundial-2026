@@ -19,7 +19,10 @@ class AuthRepository(
             val response = apiService.login(LoginRequest(email, password))
             if (response.isSuccessful && response.body() != null) {
                 val data = response.body()!!
-                preferencesManager.saveToken(data.token)
+                preferencesManager.saveTokenWithExpiry(
+                    token = data.token,
+                    expiresInSeconds = 86400
+                )
                 preferencesManager.saveUserInfo(data.name, data.email)
                 Result.success(data)
             } else {
@@ -42,8 +45,6 @@ class AuthRepository(
             )
             if (response.isSuccessful && response.body() != null) {
                 val data = response.body()!!
-                preferencesManager.saveToken(data.token)
-                preferencesManager.saveUserInfo(data.name, data.email)
                 Result.success(data)
             } else {
                 Result.failure(Exception("Error al registrar usuario"))
@@ -78,11 +79,17 @@ class AuthRepository(
                 saveProfileToLocal(profile)
                 Result.success(profile)
             } else {
-                val localProfile = getProfileFromLocal()
-                if (localProfile != null) {
-                    Result.success(localProfile)
+
+                if (response.code() == 401) {
+                    preferencesManager.clearAll()
+                    Result.failure(Exception("Sesión expirada. Inicia sesión nuevamente."))
                 } else {
-                    Result.failure(Exception("Error al obtener perfil"))
+                    val localProfile = getProfileFromLocal()
+                    if (localProfile != null) {
+                        Result.success(localProfile)
+                    } else {
+                        Result.failure(Exception("Error al obtener perfil"))
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -130,4 +137,5 @@ class AuthRepository(
     fun isLoggedIn(): Boolean = preferencesManager.isLoggedIn()
     fun getUserName(): String? = preferencesManager.getUserName()
     fun getUserEmail(): String? = preferencesManager.getUserEmail()
+
 }

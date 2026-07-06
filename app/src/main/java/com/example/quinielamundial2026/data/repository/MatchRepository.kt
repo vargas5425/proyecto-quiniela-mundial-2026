@@ -3,6 +3,7 @@ package com.example.quinielamundial2026.data.repository
 import com.example.quinielamundial2026.data.api.ApiService
 import com.example.quinielamundial2026.data.database.AppDatabase
 import com.example.quinielamundial2026.data.database.entities.MatchEntity
+import com.example.quinielamundial2026.data.database.relations.MatchWithStadium
 import com.example.quinielamundial2026.data.models.response.MatchDetailResponse
 import com.example.quinielamundial2026.data.models.response.MatchResponse
 import com.example.quinielamundial2026.data.models.response.MatchUpdatesResponse
@@ -85,40 +86,19 @@ class MatchRepository(
                     status = match.status,
                     homeScore = match.homeScore,
                     awayScore = match.awayScore,
-                    stadiumId = match.stadium?.id,
-                    stadiumName = match.stadium?.name,
-                    stadiumCity = match.stadium?.city,
-                    stadiumCountry = match.stadium?.country
+                    stadiumId = match.stadium?.id
                 )
             }
         )
     }
 
-    // ============ OBTENER TODOS LOS PARTIDOS DE LA BD (OFFLINE) ============
+    // ============ OBTENER TODOS LOS PARTIDOS DE LA BD ============
     private suspend fun getMatchesFromLocal(): Result<List<MatchResponse>> {
-        val localMatches = database.matchDao().getAllMatches()
-        return if (localMatches.isNotEmpty()) {
+        val matchesWithStadium = database.matchDao().getAllMatchesWithStadium()
+        return if (matchesWithStadium.isNotEmpty()) {
             Result.success(
-                localMatches.map { entity ->
-                    MatchResponse(
-                        id = entity.id,
-                        homeTeam = entity.homeTeam,
-                        awayTeam = entity.awayTeam,
-                        matchDate = entity.matchDate,
-                        phase = entity.phase,
-                        groupName = entity.groupName,
-                        status = entity.status,
-                        homeScore = entity.homeScore,
-                        awayScore = entity.awayScore,
-                        stadium = entity.stadiumId?.let {
-                            MatchResponse.StadiumInfo(
-                                id = it,
-                                name = entity.stadiumName ?: "",
-                                city = entity.stadiumCity ?: "",
-                                country = entity.stadiumCountry ?: ""
-                            )
-                        }
-                    )
+                matchesWithStadium.map { matchWithStadium ->
+                    matchWithStadium.toResponse()
                 }
             )
         } else {
@@ -126,31 +106,13 @@ class MatchRepository(
         }
     }
 
-    // ============ OBTENER PRÓXIMOS PARTIDOS DE LA BD (OFFLINE) ============
+    // ============ OBTENER PRÓXIMOS PARTIDOS DE LA BD  ============
     suspend fun getNextMatchesFromLocal(): Result<List<MatchResponse>> {
-        val localMatches = database.matchDao().getNextMatches()
-        return if (localMatches.isNotEmpty()) {
+        val matchesWithStadium = database.matchDao().getNextMatchesWithStadium()
+        return if (matchesWithStadium.isNotEmpty()) {
             Result.success(
-                localMatches.map { entity ->
-                    MatchResponse(
-                        id = entity.id,
-                        homeTeam = entity.homeTeam,
-                        awayTeam = entity.awayTeam,
-                        matchDate = entity.matchDate,
-                        phase = entity.phase,
-                        groupName = entity.groupName,
-                        status = entity.status,
-                        homeScore = entity.homeScore,
-                        awayScore = entity.awayScore,
-                        stadium = entity.stadiumId?.let {
-                            MatchResponse.StadiumInfo(
-                                id = it,
-                                name = entity.stadiumName ?: "",
-                                city = entity.stadiumCity ?: "",
-                                country = entity.stadiumCountry ?: ""
-                            )
-                        }
-                    )
+                matchesWithStadium.map { matchWithStadium ->
+                    matchWithStadium.toResponse()
                 }
             )
         } else {
@@ -165,10 +127,46 @@ class MatchRepository(
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception("No se pudo cargar el detalle del partido"))
+                // Si falla la API, intentamos con Room
+                getMatchDetailFromLocal(matchId)
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error de conexión: ${e.message}"))
+            getMatchDetailFromLocal(matchId)
+        }
+    }
+
+    // ============ OBTENER DETALLE DE PARTIDO DESDE LOCAL ============
+    private suspend fun getMatchDetailFromLocal(matchId: Int): Result<MatchDetailResponse> {
+        val matchWithStadium = database.matchDao().getMatchWithStadiumById(matchId)
+        return if (matchWithStadium != null) {
+            val match = matchWithStadium.match
+            val stadium = matchWithStadium.stadium
+            Result.success(
+                MatchDetailResponse(
+                    id = match.id,
+                    homeTeam = match.homeTeam,
+                    awayTeam = match.awayTeam,
+                    matchDate = match.matchDate,
+                    phase = match.phase,
+                    groupName = match.groupName,
+                    status = match.status,
+                    homeScore = match.homeScore,
+                    awayScore = match.awayScore,
+                    stadium = stadium?.let {
+                        com.example.quinielamundial2026.data.models.response.StadiumResponse(
+                            id = it.id,
+                            name = it.name,
+                            city = it.city,
+                            country = it.country,
+                            latitude = it.latitude,
+                            longitude = it.longitude,
+                            capacity = it.capacity
+                        )
+                    } ?: throw Exception("Estadio no encontrado")
+                )
+            )
+        } else {
+            Result.failure(Exception("No se encontró el partido"))
         }
     }
 
@@ -197,4 +195,27 @@ class MatchRepository(
             Result.failure(Exception("Error de conexión: ${e.message}"))
         }
     }
+}
+
+// ============ FUNCIÓN DE EXTENSIÓN PARA MAPEO ============
+private fun MatchWithStadium.toResponse(): MatchResponse {
+    return MatchResponse(
+        id = match.id,
+        homeTeam = match.homeTeam,
+        awayTeam = match.awayTeam,
+        matchDate = match.matchDate,
+        phase = match.phase,
+        groupName = match.groupName,
+        status = match.status,
+        homeScore = match.homeScore,
+        awayScore = match.awayScore,
+        stadium = stadium?.let {
+            MatchResponse.StadiumInfo(
+                id = it.id,
+                name = it.name,
+                city = it.city,
+                country = it.country
+            )
+        }
+    )
 }

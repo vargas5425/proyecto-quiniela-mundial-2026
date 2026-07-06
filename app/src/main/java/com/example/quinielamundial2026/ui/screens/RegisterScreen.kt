@@ -19,6 +19,7 @@ import com.example.quinielamundial2026.QuinielaApplication
 import com.example.quinielamundial2026.ui.components.LoadingSpinner
 import com.example.quinielamundial2026.ui.viewmodels.RegisterViewModel
 import com.example.quinielamundial2026.ui.viewmodels.ViewModelFactory
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +38,10 @@ fun RegisterScreen(
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             showSuccessDialog = true
+            delay(2000)
+            showSuccessDialog = false
+            viewModel.resetSuccessState()
+            onNavigateToLogin()
         }
     }
 
@@ -48,9 +53,6 @@ fun RegisterScreen(
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = {
-                showSuccessDialog = false
-                viewModel.resetSuccessState()
-                onNavigateToLogin()
             },
             icon = {
                 Icon(
@@ -64,7 +66,7 @@ fun RegisterScreen(
             text = {
                 Text(
                     text = "Tu cuenta ha sido creada correctamente.\n" +
-                            "Ahora puedes iniciar sesión con tus credenciales.",
+                            "Serás redirigido a la pantalla de inicio de sesión.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },

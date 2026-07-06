@@ -17,7 +17,7 @@ import com.example.quinielamundial2026.ui.components.MatchCard
 import com.example.quinielamundial2026.ui.viewmodels.MatchesViewModel
 import com.example.quinielamundial2026.ui.viewmodels.ViewModelFactory
 import com.example.quinielamundial2026.utils.Constants
-//NO OLVIDARSE DE SUBIR ESTO A GITHUB
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchesScreen(
@@ -246,7 +246,7 @@ fun MatchesScreen(
                             viewModel.filterByPhase(Constants.PHASE_THIRD_PLACE)
                             showFilterMenu = false
                         },
-                        label = { Text("Tercer Lugar") },
+                        label = { Text("Tercer lugar") },
                         selected = uiState.selectedPhase == Constants.PHASE_THIRD_PLACE
                     )
                     FilterChip(
